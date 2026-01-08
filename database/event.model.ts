@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Model } from 'mongoose';
+import mongoose, { Document, Schema, Model, HookNextFunction } from 'mongoose';
 
 // TypeScript interface for Event document
 export interface IEvent extends Document {
@@ -105,7 +105,7 @@ const EventSchema = new Schema<IEvent>(
 );
 
 // Pre-save hook to generate slug, normalize date, and validate time
-EventSchema.pre('save', function (next) {
+EventSchema.pre('save', function (this: IEvent, next: HookNextFunction) {
   // Generate slug only if title is new or modified
   if (this.isModified('title')) {
     this.slug = this.title
@@ -121,11 +121,7 @@ EventSchema.pre('save', function (next) {
   if (this.isModified('date')) {
     const parsedDate = new Date(this.date);
     if (isNaN(parsedDate.getTime())) {
-      // @ts-ignore
-        // @ts-ignore
-        // @ts-ignore
-        // @ts-ignore
-        return next(new Error('Invalid date format'));
+      return next(new Error('Invalid date format'));
     }
     // Store as ISO string (YYYY-MM-DD)
     this.date = parsedDate.toISOString().split('T')[0];
@@ -135,13 +131,11 @@ EventSchema.pre('save', function (next) {
   if (this.isModified('time')) {
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(this.time)) {
-      // @ts-ignore
-        return next(new Error('Time must be in HH:MM format (24-hour)'));
+      return next(new Error('Time must be in HH:MM format (24-hour)'));
     }
   }
 
-  // @ts-ignore
-    next();
+  next();
 });
 
 // Add index to slug for faster queries

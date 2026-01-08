@@ -34,32 +34,15 @@ const BookingSchema = new Schema<IBooking>(
   }
 );
 
-// Pre-save hook to verify that the referenced event exists
-BookingSchema.pre('save', async function (next) {
-  // Only validate eventId if it's new or modified
-  if (this.isModified('eventId')) {
-    try {
-      // Dynamically import Event model to avoid circular dependencies
-      const Event = mongoose.models.Event || (await import('./event.model')).default;
-      
-      const eventExists = await Event.exists({ _id: this.eventId });
-      
-      if (!eventExists) {
-        // @ts-ignore
-        return next(new Error('Referenced event does not exist'));
-      }
-    } catch (error) {
-      // @ts-ignore
-      return next(error as Error);
-    }
-  }
-  
+// Compound unique index to ensure one booking per email per event
+BookingSchema.index({ eventId: 1, email: 1 }, { unique: true });
+
+// NOTE: Event existence validation should be performed at the application/service
+// layer before calling booking.save() to avoid unnecessary DB hits on every save.
+// Example: await Event.findById(eventId) or Event.exists({ _id: eventId })
   // @ts-ignore
   next();
 });
-
-// Add index on eventId for faster queries
-BookingSchema.index({ eventId: 1 });
 
 // Create and export the Booking model
 // Use existing model if it exists to prevent OverwriteModelError in development
